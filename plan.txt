@@ -1,0 +1,12 @@
+1.Post to multiple accounts at the same time.
+2. many post types reels,stories,media,text
+3. scheduling easily 
+4. sort url, captions.
+5. ai content ai image.
+6. export import multiple posts
+7. automated system between social medias
+[support facebook,instagram,twitter x]
+8. Preview Post
+9. Social posting reports
+10.Google Analytics campaign tracking
+11. post analytics
