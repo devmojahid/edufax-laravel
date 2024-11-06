@@ -1,18 +1,106 @@
+# Laravel EditorConfig
 root = true
 
 [*]
 charset = utf-8
 end_of_line = lf
-indent_size = 4
-indent_style = space
 insert_final_newline = true
+indent_style = space
+indent_size = 4
 trim_trailing_whitespace = true
 
 [*.md]
 trim_trailing_whitespace = false
 
+[*.{yml,yaml,json,js,jsx,ts,tsx,css,scss,vue}]
+indent_size = 2
+
+[*.{blade.php,html}]
+indent_size = 2
+
+[composer.json]
+indent_size = 4
+
+[*.php]
+indent_size = 4
+max_line_length = 120
+
+[routes/*.php]
+indent_size = 4
+
+[database/migrations/*.php]
+indent_size = 4
+
+[tests/**.php]
+indent_size = 4
+
+[resources/lang/*.php]
+indent_size = 4
+
+[docker-compose.{yml,yaml}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+
+# React Inertia EditorConfig
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{js,jsx,ts,tsx}]
+indent_size = 2
+max_line_length = 100
+quote_type = single
+
+[resources/js/Pages/**/*.{js,jsx,ts,tsx}]
+indent_size = 2
+max_line_length = 100
+
+[resources/js/Components/**/*.{js,jsx,ts,tsx}]
+indent_size = 2
+max_line_length = 100
+
+[resources/js/Layouts/**/*.{js,jsx,ts,tsx}]
+indent_size = 2
+max_line_length = 100
+
+[*.{css,scss,less}]
+indent_size = 2
+
+[*.json]
+indent_size = 2
+
+[*.html]
+indent_size = 2
+
 [*.{yml,yaml}]
 indent_size = 2
 
-[docker-compose.yml]
-indent_size = 4
+[.prettierrc]
+indent_size = 2
+
+[.eslintrc]
+indent_size = 2
+
+[package.json]
+indent_size = 2
+
+[tsconfig.json]
+indent_size = 2
+
+[vite.config.{js,ts}]
+indent_size = 2
+
+[tailwind.config.{js,ts}]
+indent_size = 2

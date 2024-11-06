@@ -1,100 +1,37 @@
-import { useState } from "react";
-import { Link, usePage } from "@inertiajs/react";
-import {
-  ArrowDown,
-  ArrowRight,
-  Bell,
-  ChevronDown,
-  ChevronRight,
-  CircleUser,
-  Home,
-  LineChart,
-  Menu,
-  Package,
-  Package2,
-  Search,
-  ShoppingCart,
-  Users,
-} from "lucide-react";
-import { SidebarLinks } from "./SidebarAllLinks";
+import React from "react";
+import { Link } from "@inertiajs/react";
+import { X } from "lucide-react";
+import SidebarAllLinks from "./SidebarAllLinks";
 
-const Sidebar = ({ isMobile = false }) => {
-  const { url } = usePage();
-  const [openMenu, setOpenMenu] = useState(null);
-
-  const handleToggle = (menuTitle) => {
-    setOpenMenu(openMenu === menuTitle ? null : menuTitle);
-  };
-
-  const isActive = (href) => url === href;
-
+export default function Sidebar({ sidebarOpen, closeSidebar }) {
   return (
-    <nav
-      className={`flex flex-col ${
-        isMobile ? "text-lg" : "text-sm font-medium"
-      }`}
+    <aside
+      className={`
+      fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-lg transform 
+      lg:translate-x-0 lg:static lg:inset-0 transition-transform duration-300 ease-in-out
+      ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+    `}
     >
-      {SidebarLinks.map((item) => (
-        <div key={item.href}>
-          {/* Main Sidebar Link or Button */}
-          {item.sub ? (
-            <button
-              onClick={() => handleToggle(item.title)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary w-full text-left ${
-                (isMobile ? "text-muted-foreground" : "text-muted-foreground",
-                isActive(item.href) ? "text-primary" : "")
-              }`}
-            >
-              {item.icon}
-              {item.title}
-              {openMenu === item.title ? (
-                <span className="ml-auto">
-                  <ChevronDown />
-                </span> // Down arrow
-              ) : (
-                <span className="ml-auto">
-                  <ChevronRight />
-                </span> // Right arrow
-              )}
-            </button>
-          ) : (
-            <Link
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${
-                isMobile ? "text-muted-foreground" : "text-muted-foreground"
-              }`}
-            >
-              {item.icon}
-              {item.title}
-              {item.label && (
-                <span className="ml-auto inline-flex items-center justify-center w-3 h-3 rounded-full bg-red-500 text-white text-xs">
-                  {item.label}
-                </span>
-              )}
-            </Link>
-          )}
-
-          {/* Sub-menu Links */}
-          {item.sub && openMenu === item.title && (
-            <div className="ml-4 mt-2 space-y-1">
-              {item.sub.map((subItem) => (
-                <Link
-                  key={subItem.href}
-                  href={subItem.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${
-                    isMobile ? "text-muted-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {subItem.icon}
-                  {subItem.title}
-                </Link>
-              ))}
-            </div>
-          )}
+      <div className="flex flex-col h-screen">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+          <Link
+            href="/admin/dashboard"
+            className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent"
+          >
+            NextGen
+          </Link>
+          <button
+            onClick={closeSidebar}
+            className="lg:hidden text-gray-500 hover:text-gray-700 focus:outline-none"
+            aria-label="Close sidebar"
+          >
+            <X className="h-6 w-6" />
+          </button>
         </div>
-      ))}
-    </nav>
+        <nav className="flex-1 overflow-y-auto py-4">
+          <SidebarAllLinks closeSidebar={closeSidebar} />
+        </nav>
+      </div>
+    </aside>
   );
-};
-
-export default Sidebar;
+}

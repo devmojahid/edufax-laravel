@@ -2,47 +2,41 @@
 
 namespace App\Services;
 
-use App\Models\User;
+use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Support\BaseService;
+use Illuminate\Support\Facades\Hash;
 
-class UserService
+class UserService extends BaseService
 {
-    public function store(array $data)
+    protected UserRepositoryInterface $userRepository;
+
+    public function __construct(UserRepositoryInterface $userRepository)
     {
-        $user = User::create($data);
+        parent::__construct($userRepository);
+        $this->userRepository = $userRepository;
+    }
+
+    public function create(array $data): mixed
+    {
+        $data['password'] = Hash::make($data['password']);
+        $user = parent::create($data);
+
+        if (isset($data['roles'])) {
+            foreach ($data['roles'] as $role) {
+                $this->userRepository->attachRole($user->id, $role);
+            }
+        }
+
         return $user;
     }
 
-    public function update(array $data, User $user)
+    public function findByRole(string $role)
     {
-        $user->update($data);
-        return $user;
+        return $this->userRepository->findByRole($role);
     }
 
-    public function index($request)
+    public function findByEmail(string $email)
     {
-        $query = User::query();
-
-        if ($request->has('filter') && $request->has('filter_field')) {
-            $query->where($request->input('filter_field'), 'like', '%' . $request->input('filter') . '%');
-        }
-
-        if ($request->has('sort_by') && $request->has('sort_direction')) {
-            $query->orderBy($request->input('sort_by'), $request->input('sort_direction'));
-        }
-
-        if ($request->has('trashed') && $request->input('trashed') == 'with') {
-            $query->withTrashed();
-        }
-
-        if ($request->has('trashed') && $request->input('trashed') == 'only') {
-            $query->onlyTrashed();
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        // Paginate results
-        $users = $query->paginate($request->input('per_page', 10));
+        return $this->userRepository->findByEmail($email);
     }
 }

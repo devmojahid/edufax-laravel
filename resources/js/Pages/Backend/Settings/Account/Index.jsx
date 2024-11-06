@@ -1,5 +1,5 @@
 import React from "react";
-import SettingsLayout from "../Index";
+import SettingsLayout from "../Index-2";
 const Index = () => {
   return (
     <SettingsLayout>

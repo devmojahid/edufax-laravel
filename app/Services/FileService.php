@@ -3,118 +3,155 @@
 namespace App\Services;
 
 use App\Models\File;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Exception;
+use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
 
 class FileService
 {
-    /**
-     * Upload single or multiple files and associate them with a model.
-     *
-     * @param array $files
-     * @param object $fileable
-     * @param string|null $collectionName
-     * @param int|null $userId
-     * @return array
-     */
-    public static function uploadFiles(array $files, $fileable, $collectionName = null, $userId = null)
-    {
-        $uploadedFiles = [];
+    protected array $allowedMimeTypes = [
+        'image' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        'document' => ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        'video' => ['video/mp4', 'video/mpeg', 'video/quicktime'],
+    ];
 
-        foreach ($files as $file) {
-            self::validateFile($file);
+    protected array $imageResizeConfigs = [
+        'thumbnail' => ['width' => 150, 'height' => 150],
+        'medium' => ['width' => 300, 'height' => 300],
+        'large' => ['width' => 800, 'height' => 800],
+    ];
 
-            $path = $file->store('uploads', 'public');
-            $fileUrl = Storage::disk('public')->url($path);
+    public function upload(
+        UploadedFile $file,
+        string $path = '',
+        array $options = []
+    ): File {
+        $options = array_merge([
+            'disk' => 'public',
+            'collection' => null,
+            'resize' => false,
+            'optimize' => true,
+            'meta' => [],
+        ], $options);
 
-            $uploadedFiles[] = File::create([
-                'file_name' => $file->getClientOriginalName(),
-                'file_path' => $path,
-                'mime_type' => $file->getMimeType(),
-                'file_type' => self::determineFileType($file->getMimeType()),
-                'file_extension' => $file->getClientOriginalExtension(),
-                'file_size' => $file->getSize(),
-                'disk' => 'public',
-                'collection_name' => $collectionName,
-                'file_url' => $fileUrl,
-                'fileable_id' => $fileable->id,
-                'fileable_type' => get_class($fileable),
-                'user_id' => $userId,
-            ]);
+        $filename = $this->generateFilename($file);
+        $fullPath = $this->getFullPath($path, $filename);
+
+        if ($this->isImage($file) && $options['resize']) {
+            $this->handleImageUpload($file, $fullPath, $options);
+        } else {
+            Storage::disk($options['disk'])->putFileAs(
+                $path,
+                $file,
+                $filename
+            );
         }
 
-        return $uploadedFiles;
+        return File::create([
+            'original_name' => $file->getClientOriginalName(),
+            'filename' => $filename,
+            'path' => $fullPath,
+            'disk' => $options['disk'],
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'collection' => $options['collection'],
+            'meta' => array_merge([
+                'extension' => $file->getClientOriginalExtension(),
+                'type' => $this->getFileType($file),
+            ], $options['meta']),
+        ]);
     }
 
-    /**
-     * Validate the file based on size and MIME type.
-     *
-     * @param object $file
-     * @throws Exception
-     */
-    private static function validateFile($file)
+    protected function handleImageUpload(UploadedFile $file, string $path, array $options): void
     {
-        $maxFileSize = 10240; // 10MB
-        $allowedMimeTypes = ['image/jpeg', 'image/png', 'video/mp4', 'application/pdf'];
+        $image = Image::make($file);
 
-        if ($file->getSize() > $maxFileSize * 1024) {
-            throw new Exception("File size exceeds the limit of $maxFileSize KB.");
+        if ($options['optimize']) {
+            $image->optimize();
         }
 
-        if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
-            throw new Exception("Invalid file type: " . $file->getMimeType());
+        foreach ($this->imageResizeConfigs as $size => $dimensions) {
+            $resizedImage = clone $image;
+            $resizedImage->fit($dimensions['width'], $dimensions['height']);
+
+            $sizePath = str_replace(
+                basename($path),
+                $size . '_' . basename($path),
+                $path
+            );
+
+            Storage::disk($options['disk'])->put(
+                $sizePath,
+                $resizedImage->encode()
+            );
         }
+
+        // Save original
+        Storage::disk($options['disk'])->put(
+            $path,
+            $image->encode()
+        );
     }
 
-    /**
-     * Determine file type based on MIME type.
-     *
-     * @param string $mimeType
-     * @return string
-     */
-    public static function determineFileType($mimeType)
+    protected function generateFilename(UploadedFile $file): string
     {
-        if (strpos($mimeType, 'image') !== false) {
-            return 'image';
-        } elseif (strpos($mimeType, 'video') !== false) {
-            return 'video';
-        }
-
-        return 'document';
+        return Str::uuid() . '.' . $file->getClientOriginalExtension();
     }
 
-    /**
-     * Delete a file based on its UUID.
-     *
-     * @param string $uuid
-     * @return bool
-     */
-    public static function deleteFile($uuid)
+    protected function getFullPath(string $path, string $filename): string
     {
-        $file = File::where('uuid', $uuid)->firstOrFail();
+        return trim($path . '/' . $filename, '/');
+    }
 
-        if (Storage::disk($file->disk)->exists($file->file_path)) {
-            Storage::disk($file->disk)->delete($file->file_path);
+    protected function isImage(UploadedFile $file): bool
+    {
+        return in_array($file->getMimeType(), $this->allowedMimeTypes['image']);
+    }
+
+    protected function getFileType(UploadedFile $file): string
+    {
+        $mimeType = $file->getMimeType();
+
+        foreach ($this->allowedMimeTypes as $type => $mimeTypes) {
+            if (in_array($mimeType, $mimeTypes)) {
+                return $type;
+            }
         }
 
+        return 'other';
+    }
+
+    public function delete(File $file): bool
+    {
+        if ($this->isImage($file->mime_type)) {
+            foreach (array_keys($this->imageResizeConfigs) as $size) {
+                $sizePath = str_replace(
+                    basename($file->path),
+                    $size . '_' . basename($file->path),
+                    $file->path
+                );
+                Storage::disk($file->disk)->delete($sizePath);
+            }
+        }
+
+        Storage::disk($file->disk)->delete($file->path);
         return $file->delete();
     }
 
-    /**
-     * Download a file based on its UUID.
-     *
-     * @param string $uuid
-     * @return mixed
-     */
-    public static function downloadFile($uuid)
+    public function getUrl(File $file, string $size = null): string
     {
-        $file = File::where('uuid', $uuid)->firstOrFail();
-
-        if (Storage::disk($file->disk)->exists($file->file_path)) {
-            return Storage::disk($file->disk)->download($file->file_path, $file->file_name);
+        if ($size && $this->isImage($file->mime_type)) {
+            $path = str_replace(
+                basename($file->path),
+                $size . '_' . basename($file->path),
+                $file->path
+            );
+        } else {
+            $path = $file->path;
         }
 
-        throw new Exception("File not found.");
+        return Storage::disk($file->disk)->url($path);
     }
 }
 

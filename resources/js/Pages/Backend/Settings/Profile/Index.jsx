@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ContentLayout from "../../ContentLayout";
-import SettingsLayout from "../Index";
+import SettingsLayout from "../Index-2";
 import { Head, Link, useForm } from "@inertiajs/react";
 import InputLabel from "@/Components/InputLabel";
 import { Input } from "@/Components/ui/input";
